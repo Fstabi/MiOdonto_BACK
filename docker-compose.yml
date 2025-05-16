@@ -12,3 +12,23 @@ services:
       - ./app:/miodonto
     command: >
       sh -c "python manage.py runserver 0.0.0.0:8000"
+    environment:
+        - DB_HOST=db
+        - DB_NAME=miodonto_db
+        - DB_USER=miodonto_user
+        - DB_PASS=miodonto_psw
+    depends_on:
+        - db
+
+  db:
+    image: postgres:13-alpine
+    volumes:
+      - dev-db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=miodonto_db
+      - POSTGRES_USER=miodonto_user
+      - POSTGRES_PASSWORD=miodonto_psw
+
+
+volumes:
+  dev-db-data:
