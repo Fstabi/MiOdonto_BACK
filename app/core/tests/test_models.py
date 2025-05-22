@@ -1,13 +1,9 @@
 import unittest
-from io import StringIO
-from unittest.mock import patch
-from django.test import TestCase
-from django.core.exceptions import ValidationError
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from psycopg2 import OperationalError as Psycopg2Error  # type: ignore
-from django.db.utils import OperationalError
-from django.core.management import call_command
+from django.test import TestCase  # type: ignore
+from django.core.exceptions import ValidationError  # type: ignore
+from django.contrib.auth import get_user_model  # type: ignore
+from django.utils import timezone  # type: ignore
+from django.db.utils import IntegrityError  # type: ignore
 
 
 class CustomUserTests(TestCase):
@@ -184,7 +180,7 @@ class CustomUserTests(TestCase):
             password="testpass123",
             role="CLINIC"
         )
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(IntegrityError):
             user2 = self.User.objects.create_user(
                 username="user2",
                 email="test@clinic.com",
@@ -192,3 +188,66 @@ class CustomUserTests(TestCase):
                 role="CLINIC"
             )
             user2.full_clean()
+    
+    def test_new_user_without_email_raises_error(self):
+        """Tests that creating a user without an email raises a ValueError"""
+        with self.assertRaisesMessage(ValueError, 'El correo electrónico es obligatorio.'):
+            get_user_model().objects.create_user(username='', email='', password='testpass123')
+
+    def test_new_user_with_none_email_raises_error(self):
+        """Tests that creating a user with email=None raises a ValueError"""
+        with self.assertRaises(ValueError):
+            get_user_model().objects.create_user(username='testuser', email=None, password='testpass123')
+
+    def test_new_user_with_invalid_email_raises_error(self):
+        """Tests that creating a user with an invalid email raises a ValidationError"""
+        with self.assertRaises(ValidationError):
+            user = get_user_model().objects.create_user(
+                username='testuser',
+                email='invalid',
+                password='testpass123'
+            )
+            user.full_clean()
+
+    def test_new_user_with_valid_email(self):
+        """Tests that creating a user with a valid email works correctly"""
+        user = get_user_model().objects.create_user(
+            username='testuser',
+            email='test@clinic.com',
+            password='testpass123'
+        )
+        self.assertEqual(user.email, 'test@clinic.com')
+        self.assertEqual(user.username, 'testuser')
+        self.assertTrue(user.check_password('testpass123'))
+
+    def test_create_superuser(self):
+        """Tests that creating a superuser works correctly"""
+        user = get_user_model().objects.create_superuser(
+            username='admin',
+            email='test@example.com',
+            password='test123'
+        )
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.is_staff)
+        self.assertEqual(user.email, 'test@example.com')
+        self.assertTrue(user.check_password('test123'))
+        self.assertEqual(user.role, 'CLINIC')
+    
+    def test_create_superuser_without_email_raises_error(self):
+        """Tests that creating a superuser without an email raises a ValueError"""
+        with self.assertRaisesMessage(ValueError, 'El correo electrónico es obligatorio.'):
+            get_user_model().objects.create_superuser(
+                username='admin',
+                email='',
+                password='test123'
+            )
+    
+    def test_create_superuser_with_invalid_email_raises_error(self):
+        """Tests that creating a superuser with an invalid email raises a ValidationError"""
+        with self.assertRaises(ValidationError):
+            user = get_user_model().objects.create_superuser(
+                username='admin',
+                email='invalid',
+                password='test123'
+            )
+            user.full_clean()

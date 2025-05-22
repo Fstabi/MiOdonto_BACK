@@ -1,8 +1,8 @@
 from unittest.mock import patch
 from psycopg2 import OperationalError as Psycopg2Error  # type: ignore
-from django.core.management import call_command
-from django.db.utils import OperationalError
-from django.test import TestCase
+from django.core.management import call_command  # type: ignore
+from django.db.utils import OperationalError  # type: ignore
+from django.test import TestCase  # type: ignore
 from io import StringIO
 
 
@@ -26,7 +26,7 @@ class CommandTests(TestCase):
         mock_connections.__getitem__.assert_called_with('default')
         self.assertEqual(mocked_sleep.call_count, 5)
         mocked_sleep.assert_called_with(2)
-    
+
     @patch("core.management.commands.wait_for_db.connections")
     def test_wait_for_db_ready(self, mock_connections):
         """Test waiting for db when db is available."""
@@ -38,5 +38,3 @@ class CommandTests(TestCase):
             mock_connections.__getitem__.assert_called_with('default')
             self.assertEqual(mock_connections.__getitem__.call_count, 1)
             self.assertIn("Database available after 1 attempt(s)!", mock_stdout.getvalue())
-
-

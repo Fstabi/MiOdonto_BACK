@@ -1,6 +1,27 @@
-from django.db import models
-from django.contrib.auth.models import AbstractUser
-from django.utils.translation import gettext_lazy as _
+from django.db import models  # type: ignore
+from django.contrib.auth.models import (  # type: ignore
+    AbstractUser, UserManager)  # type: ignore
+from django.utils.translation import gettext_lazy as _  # type: ignore
+
+
+class CustomUserManager(UserManager):
+    """Custom manager for CustomUser to enforce email requirement."""
+    def create_user(self, username, email=None, password=None, **extra_fields):
+        if not email:
+            raise ValueError(_('El correo electrónico es obligatorio.'))
+        email = self.normalize_email(email)
+        user = self.model(username=username, email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, username, email=None,
+                         password=None, **extra_fields):
+        if not email:
+            raise ValueError(_('El correo electrónico es obligatorio.'))
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self.create_user(username, email, password, **extra_fields)
 
 
 class CustomUser(AbstractUser):
@@ -34,7 +55,7 @@ class CustomUser(AbstractUser):
         unique=True,
         blank=True,
         null=True,
-        #validators=[validate_cuit_format, validate_cuit],
+        # validators=[validate_cuit_format, validate_cuit],
         verbose_name=_('CUIT')
     )
     phone = models.CharField(
@@ -56,9 +77,14 @@ class CustomUser(AbstractUser):
         verbose_name=_('Actualizado en')
     )
 
+    objects = CustomUserManager()
+
     class Meta:
         verbose_name = _('Usuario')
         verbose_name_plural = _('Usuarios')
+        indexes = [
+            models.Index(fields=['role']),
+        ]
 
     def __str__(self):
         return f"{self.get_full_name()} ({self.get_role_display()})"
